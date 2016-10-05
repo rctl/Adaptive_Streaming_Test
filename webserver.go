@@ -2,30 +2,34 @@ package main;
 
 import (
     "net/http"
+    "os"
     "log"
 )
 
 
-var bufferSize = "4"
 
 func main() {
-    http.Handle("/", request())
+    bufferSize := os.Args[1]
+    if bufferSize != "1" && bufferSize != "4" && bufferSize != "15"{
+        log.Fatalln("Buffersize needs to be ither 1, 4 or 15.")
+    }
+    http.Handle("/", request(bufferSize))
     if err := http.ListenAndServe(":8080", nil); err != nil {
         panic(err)
     }
 }
 
 //Router and logger
-func request() http.HandlerFunc {
+func request(bufferSize string) http.HandlerFunc {
     return (func(w http.ResponseWriter, r *http.Request){
         log.Println("Request: " + r.URL.Path)
         switch r.URL.Path {
         case "/":
             serveIndex(w, r)
         case "/video.mpd":
-            serveMeta(w, r)
+            serveMeta(w, r, bufferSize)
         default:
-            serveVideo(w, r)
+            serveVideo(w, r, bufferSize)
         }
     });
 }
@@ -36,11 +40,11 @@ func serveIndex(w http.ResponseWriter, r *http.Request){
 }
 
 //Serve meta file 
-func serveMeta(w http.ResponseWriter, r *http.Request){
+func serveMeta(w http.ResponseWriter, r *http.Request, bufferSize string){
      http.ServeFile(w, r, "./video/" + bufferSize + "sec/BigBuckBunny_" + bufferSize + "s_simple_2014_05_09.mpd")
 }
 
 //Serve video files
-func serveVideo(w http.ResponseWriter, r *http.Request) {
+func serveVideo(w http.ResponseWriter, r *http.Request, bufferSize string) {
      http.ServeFile(w, r, "./video/" + bufferSize + "sec/")
 }
