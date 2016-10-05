@@ -9,8 +9,6 @@
             }
         </style>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.min.js"></script>
-        
-        </script>
     </head>
     <body>
         <div>
@@ -82,7 +80,6 @@
                 //Get Change in index
                 if (txt.indexOf("ThroughputRule") >= 0){
                     var result = parseInt(txt.match(/ThroughputRule requesting switch to index:  ([0-9]*) ty/)[1]);   
-                    var time =  Math.floor(Date.now() / 1000) - startTime;
                     chart.data.datasets[0].data.push({x: time, y: result});
                 }
 
