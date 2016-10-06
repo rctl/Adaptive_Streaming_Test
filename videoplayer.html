@@ -1,105 +1,174 @@
 <!doctype html>
 <html>
-    <head>
-        <title>Dash.js - Data collection</title>
-        <style>
-            video {
-                width: 640px;
-                height: 360px;
-            }
-        </style>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.min.js"></script>
-    </head>
-    <body>
-        <div>
-            <video id="videoPlayer" controls></video>
-        </div>
-        <canvas id="playerChart" width="640" height="400"></canvas>
-        
-        <script src="http://cdn.dashjs.org/latest/dash.mediaplayer.min.js"></script>
-        <script>
-                //Remember start time and initiate a new chart
-                const startTime = Math.floor(Date.now() / 1000);
-                var ctx = document.getElementById("playerChart");
-                var chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        datasets: [{
-                            label: 'Quality',
-                            lineTension: 0,
-                            borderColor: 'rgba(54, 162, 235, 0.2)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            data: []
-                        },{
-                            label: 'Buffer',
-                            lineTension: 0,borderColor: 'rgba(255, 206, 86, 0.2)',
-                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                            data: []
-                        },{
-                            label: 'Requests',
-                            lineTension: 0,borderColor: 'rgba(153, 102, 255, 0.2)',
-                            backgroundColor: 'rgba(153, 102, 255, 0)',
-                            data: []
+
+<head>
+    <title>Dash.js - Data collection</title>
+    <style>
+        video {
+            width: 640px;
+            height: 360px;
+        }
+    </style>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.min.js"></script>
+</head>
+
+<body>
+    <div>
+        <video id="videoPlayer" controls></video>
+    </div>
+    <canvas id="playerChart" width="640" height="400"></canvas>
+    <button onclick="updateInfo()">Update plot info</button>
+    <br>
+    <textarea id="qualityBox" rows="5"></textarea>
+    <textarea id="bufferBox" rows="5"></textarea>
+    <textarea id="requestBox" rows="5"></textarea>
+
+    <script src="http://cdn.dashjs.org/latest/dash.mediaplayer.min.js"></script>
+    <script>
+        //Remember start time and initiate a new chart
+        const startTime = Math.floor(Date.now() / 1000);
+        var ctx = document.getElementById("playerChart");
+        var chart = new Chart(ctx, {
+            type: 'line'
+            , data: {
+                datasets: [{
+                    label: 'Quality'
+                    , lineTension: 0
+                    , borderColor: 'rgba(54, 162, 235, 0.2)'
+                    , backgroundColor: 'rgba(54, 162, 235, 0.2)'
+                    , data: []
+                        }, {
+                    label: 'Buffer'
+                    , lineTension: 0
+                    , borderColor: 'rgba(255, 206, 86, 0.2)'
+                    , backgroundColor: 'rgba(255, 206, 86, 0.2)'
+                    , data: []
+                        }, {
+                    label: 'Requests'
+                    , lineTension: 0
+                    , borderColor: 'rgba(153, 102, 255, 0.2)'
+                    , backgroundColor: 'rgba(153, 102, 255, 0)'
+                    , data: []
                         }]
-                    },
-                    options: {
-                        responsive: false,
-                    scales: {
-                        xAxes: [{
-                            type: 'linear',
-                            position: 'bottom'
-                        }]
-                    }
-                }
-            });
-                
-                //Initalize the player
-                var url = "http://www-itec.uni-klu.ac.at/ftp/datasets/DASHDataset2014/BigBuckBunny/2sec/BigBuckBunny_2s_simple_2014_05_09.mpd";
-                var player = dashjs.MediaPlayer().create();
-                player.initialize(document.querySelector("#videoPlayer"), url, true);
-                
-                var checkBuffer = false;
-                
-                //Listen on console.log and update the charts
-                //(Dash.js-debug prints during all necessary events)
-                var originallog = console.log;
-                console.log = function(txt) {
-                var time =  Math.floor(Date.now() / 1000) - startTime;
-
-                //Has the player started yet?
-                if (txt.indexOf("Getting the request for video time") >= 0){
-                    checkBuffer = true;
-                }
-
-                if(checkBuffer){
-                    chart.data.datasets[1].data.push({x: time, y: Math.round(player.getBufferLength())});
-                }else{
-                    chart.data.datasets[1].data.push({x: time, y: 0});
-                }
-
-                //Get Change in index
-                if (txt.indexOf("ThroughputRule") >= 0){
-                    var result = parseInt(txt.match(/ThroughputRule requesting switch to index:  ([0-9]*) ty/)[1]);   
-                    chart.data.datasets[0].data.push({x: time, y: result});
-                }
-
-                //Get Change in index that occured through abandoning
-                if (txt.indexOf("is asking to abandon and switch to quality to") >= 0){
-                    var result = parseInt(txt.match(/is asking to abandon and switch to quality to *([1-9]*)/)[1]);   
-                    chart.data.datasets[0].data.push({x: time, y: result});
-                }  
-                
-                //Requesting new fragment with last known quality change
-                if (txt.indexOf("Getting the request for video time") >= 0 && chart.data.datasets[0].data.length>0){
-                    var lastQuality = chart.data.datasets[0].data[chart.data.datasets[0].data.length-1].y
-                    chart.data.datasets[2].data.push({x: time, y: lastQuality});
-                }
-
-                chart.update();
-                originallog.apply(console, arguments);
             }
-                
-        </script>
-        
-    </body>
+            , options: {
+                responsive: false
+                , scales: {
+                    xAxes: [{
+                        type: 'linear'
+                        , position: 'bottom'
+                        }]
+                }
+            }
+        });
+
+        //Initalize the player
+        var url = "http://www-itec.uni-klu.ac.at/ftp/datasets/DASHDataset2014/BigBuckBunny/2sec/BigBuckBunny_2s_simple_2014_05_09.mpd";
+        var player = dashjs.MediaPlayer().create();
+        player.initialize(document.querySelector("#videoPlayer"), url, true);
+
+        var checkBuffer = false;
+
+        //Listen on console.log and update the charts
+        //(Dash.js-debug prints during all necessary events)
+        var originallog = console.log;
+        console.log = function (txt) {
+            var time = Math.floor(Date.now() / 1000) - startTime;
+            //Has the player started yet?
+            if (txt.indexOf("Getting the request for video time") >= 0) {
+                checkBuffer = true;
+            }
+
+            if (checkBuffer) {
+                if(chart.data.datasets[1].data[chart.data.datasets[1].data.length - 1].x != time){
+                    chart.data.datasets[1].data.push({
+                        x: time
+                        , y: Math.round(player.getBufferLength())
+                    });
+                }
+            } else if(chart.data.datasets[1].data.length == 0){
+                chart.data.datasets[1].data.push({
+                    x: time
+                    , y: 0
+                });
+            }
+
+            //Get Change in index
+            if (txt.indexOf("ThroughputRule") >= 0) {
+                var result = parseInt(txt.match(/ThroughputRule requesting switch to index:  ([0-9]*) ty/)[1]);
+                if(chart.data.datasets[0].data.length > 0 && chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].x != time){
+                    chart.data.datasets[0].data.push({
+                        x: time
+                        , y: result
+                    });
+                }else if(chart.data.datasets[0].data.length == 0){
+                    chart.data.datasets[0].data.push({
+                        x: time
+                        , y: result
+                    });
+                }
+            }
+
+            //Get Change in index that occured through abandoning
+            if (txt.indexOf("is asking to abandon and switch to quality to") >= 0) {
+                var result = parseInt(txt.match(/is asking to abandon and switch to quality to *([1-9]*)/)[1]);
+                if(chart.data.datasets[0].data.length > 0 && chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].x != time){
+                    chart.data.datasets[0].data.push({
+                        x: time
+                        , y: result
+                    });
+                }else if(chart.data.datasets[0].data.length == 0){
+                    chart.data.datasets[0].data.push({
+                        x: time
+                        , y: result
+                    });
+                }
+            }
+
+            //Requesting new fragment with last known quality change
+            if (txt.indexOf("Getting the request for video time") >= 0 && chart.data.datasets[0].data.length > 0) {
+                var lastQuality = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].y;
+                if(chart.data.datasets[2].data.length > 0 && chart.data.datasets[2].data[chart.data.datasets[2].data.length - 1].x != time){
+                    chart.data.datasets[2].data.push({
+                        x: time
+                        , y: lastQuality
+                    });
+                }else if(chart.data.datasets[2].data.length == 0){
+                    chart.data.datasets[2].data.push({
+                        x: time
+                        , y: lastQuality
+                    });
+                }
+            }
+            chart.update();
+            originallog.apply(console, arguments);
+        }
+
+        function updateInfo() {
+            //Quality
+            var qualityData = chart.data.datasets[0].data[0];
+            document.getElementById("qualityBox").value = "Time\tQuality\n" + qualityData.x + "\t" + qualityData.y;
+            for (var i = 1; i < chart.data.datasets[0].data.length; i++) {
+                qualityData = chart.data.datasets[0].data[i];
+                document.getElementById("qualityBox").value += "\n" + qualityData.x + "\t" + qualityData.y;
+            }
+            //Buffer
+            var bufferData = chart.data.datasets[1].data[0];
+            document.getElementById("bufferBox").value = "Time\tBuffer\n" + bufferData.x + "\t" + bufferData.y;
+            for (var i = 1; i < chart.data.datasets[1].data.length; i++) {
+                bufferData = chart.data.datasets[1].data[i];
+                document.getElementById("bufferBox").value += "\n" + bufferData.x + "\t" + bufferData.y;
+            }
+            //Request
+            var requestData = chart.data.datasets[2].data[0];
+            document.getElementById("requestBox").value = "Time\tRequest\n" + requestData.x + "\t" + requestData.y;
+            for (var i = 1; i < chart.data.datasets[2].data.length; i++) {
+                requestData = chart.data.datasets[2].data[i];
+                document.getElementById("requestBox").value += "\n" + requestData.x + "\t" + requestData.y;
+            }
+        }
+    </script>
+
+</body>
+
 </html>
