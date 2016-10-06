@@ -26,7 +26,7 @@ func main() {
 
 func discover(path string, f os.FileInfo, err error) error {
 	filename := f.Name()
-	if strings.HasSuffix(filename, ".mpd") && err == nil {
+	if strings.HasSuffix(filename, ".mpd") && !strings.Contains(filename, "onDemand") && err == nil {
 		avaiableStreams = append(avaiableStreams, "/"+path)
 	}
 	return nil
