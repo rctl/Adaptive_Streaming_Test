@@ -39,7 +39,7 @@
     <script>
         //Video player initializarion and video stream detection
         var player = dashjs.MediaPlayer().create();
-        var startTime = Math.floor(Date.now() / 1000);
+        var startTime = Date.now() / 1000;
         $.get("/streams", function(data){
             var streamList = jQuery.parseJSON(data);
             $.each(streamList, function(k, v) {
@@ -56,6 +56,7 @@
                 chart.data.datasets[0].data = [];
                 chart.data.datasets[1].data = [];
                 chart.data.datasets[2].data = [];
+                chart.data.datasets[3].data = [];
                 checkBuffer = false;
                 startTime = Math.floor(Date.now() / 1000);
                 player.initialize(document.querySelector("#videoPlayer"), this.value, true); 
@@ -70,11 +71,12 @@
             type: 'line'
             , data: {
                 datasets: [{
-                    label: 'Quality'
+                    label: 'Quality Change'
                     , lineTension: 0
                     , borderColor: 'rgba(54, 162, 235, 0.2)'
                     , backgroundColor: 'rgba(54, 162, 235, 0.2)'
                     , data: []
+                        , hidden: true
                         }, {
                     label: 'Buffer'
                     , lineTension: 0
@@ -86,6 +88,12 @@
                     , lineTension: 0
                     , borderColor: 'rgba(153, 102, 255, 0.2)'
                     , backgroundColor: 'rgba(153, 102, 255, 0)'
+                    , data: []
+                        }, {
+                    label: 'Player Quality'
+                    , lineTension: 0
+                    , borderColor: 'rgba(63, 191, 127, 0.2)'
+                    , backgroundColor: 'rgba(63, 191, 127, 0.2)'
                     , data: []
                         }]
             }
@@ -106,100 +114,126 @@
         //(Dash.js-debug prints during all necessary events)
         var originallog = console.log;
         console.log = function (txt) {
-            var time = Math.floor(Date.now() / 1000) - startTime;
-            //Has the player started yet?
-            if (txt.indexOf("Getting the request for video time") >= 0) {
-                checkBuffer = true;
-            }
+        var time = Math.round(Date.now() / 1000) - Math.round(startTime);
+        var timeNotRounded = (Date.now() / 1000) - startTime;
+        //Has the player started yet?
+        if (txt.indexOf("Getting the request for video time") >= 0) {
+            checkBuffer = true;
+        }
 
-            if (checkBuffer) {
-                if(chart.data.datasets[1].data[chart.data.datasets[1].data.length - 1].x != time){
-                    chart.data.datasets[1].data.push({
-                        x: time
-                        , y: Math.round(player.getBufferLength())
-                    });
-                }
-            } else if(chart.data.datasets[1].data.length == 0){
+        if (checkBuffer) {
+            if(chart.data.datasets[1].data[chart.data.datasets[1].data.length - 1].x != time){
                 chart.data.datasets[1].data.push({
                     x: time
-                    , y: 0
+                    , y: Math.round(player.getBufferLength())
                 });
             }
-
-            //Get Change in index
-            if (txt.indexOf("ThroughputRule") >= 0) {
-                var result = parseInt(txt.match(/ThroughputRule requesting switch to index:  ([0-9]*) ty/)[1]);
-                if(chart.data.datasets[0].data.length > 0 && chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].x != time){
-                    chart.data.datasets[0].data.push({
-                        x: time
-                        , y: result
-                    });
-                }else if(chart.data.datasets[0].data.length == 0){
-                    chart.data.datasets[0].data.push({
-                        x: time
-                        , y: result
-                    });
-                }
-            }
-
-            //Get Change in index that occured through abandoning
-            if (txt.indexOf("is asking to abandon and switch to quality to") >= 0) {
-                var result = parseInt(txt.match(/is asking to abandon and switch to quality to *([1-9]*)/)[1]);
-                if(chart.data.datasets[0].data.length > 0 && chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].x != time){
-                    chart.data.datasets[0].data.push({
-                        x: time
-                        , y: result
-                    });
-                }else if(chart.data.datasets[0].data.length == 0){
-                    chart.data.datasets[0].data.push({
-                        x: time
-                        , y: result
-                    });
-                }
-            }
-
-            //Requesting new fragment with last known quality change
-            if (txt.indexOf("Getting the request for video time") >= 0 && chart.data.datasets[0].data.length > 0) {
-                var lastQuality = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].y;
-                if(chart.data.datasets[2].data.length > 0 && chart.data.datasets[2].data[chart.data.datasets[2].data.length - 1].x != time){
-                    chart.data.datasets[2].data.push({
-                        x: time
-                        , y: lastQuality
-                    });
-                }else if(chart.data.datasets[2].data.length == 0){
-                    chart.data.datasets[2].data.push({
-                        x: time
-                        , y: lastQuality
-                    });
-                }
-            }
-            chart.update();
-            originallog.apply(console, arguments);
+        } else if(chart.data.datasets[1].data.length == 0){
+            chart.data.datasets[1].data.push({
+                x: time
+                , y: 0
+            });
         }
 
-        function updateInfo() {
-            //Quality
-            var qualityData = chart.data.datasets[0].data[0];
-            document.getElementById("qualityBox").value = "Time\tQuality\n" + qualityData.x + "\t" + qualityData.y;
-            for (var i = 1; i < chart.data.datasets[0].data.length; i++) {
-                qualityData = chart.data.datasets[0].data[i];
-                document.getElementById("qualityBox").value += "\n" + qualityData.x + "\t" + qualityData.y;
-            }
-            //Buffer
-            var bufferData = chart.data.datasets[1].data[0];
-            document.getElementById("bufferBox").value = "Time\tBuffer\n" + bufferData.x + "\t" + bufferData.y;
-            for (var i = 1; i < chart.data.datasets[1].data.length; i++) {
-                bufferData = chart.data.datasets[1].data[i];
-                document.getElementById("bufferBox").value += "\n" + bufferData.x + "\t" + bufferData.y;
-            }
-            //Request
-            var requestData = chart.data.datasets[2].data[0];
-            document.getElementById("requestBox").value = "Time\tRequest\n" + requestData.x + "\t" + requestData.y;
-            for (var i = 1; i < chart.data.datasets[2].data.length; i++) {
-                requestData = chart.data.datasets[2].data[i];
-                document.getElementById("requestBox").value += "\n" + requestData.x + "\t" + requestData.y;
+        //Player Quality
+        if(player.time()>0){
+            if(chart.data.datasets[3].data.length > 0 && chart.data.datasets[3].data[chart.data.datasets[3].data.length - 1].x != time){
+                chart.data.datasets[3].data.push({
+                    x: time
+                    , y: player.getQualityFor('video')
+                });
+            }else if(chart.data.datasets[3].data.length == 0){
+                chart.data.datasets[3].data.push({
+                    x: time
+                    , y: player.getQualityFor('video')
+                });
             }
         }
+
+        //Get Change in index, request made
+        if (txt.indexOf("ThroughputRule") >= 0) {
+            var result = parseInt(txt.match(/ThroughputRule requesting switch to index:  ([0-9]*) ty/)[1]);
+            if(chart.data.datasets[0].data.length > 0 && chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].x != timeNotRounded){
+                chart.data.datasets[0].data.push({
+                    x: time
+                    , y: result
+                });
+            }else if(chart.data.datasets[0].data.length == 0){
+                chart.data.datasets[0].data.push({
+                    x: time
+                    , y: result
+                });
+            }else{
+                 chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].y = result;
+            }
+            addRequest(timeNotRounded);
+
+        }
+
+        //Get Change in index that occured through abandoning, request made
+        if (txt.indexOf("is asking to abandon and switch to quality to") >= 0) {
+            var result = parseInt(txt.match(/is asking to abandon and switch to quality to *([1-9]*)/)[1]);
+            if(chart.data.datasets[0].data.length > 0 && chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].x != time){
+                chart.data.datasets[0].data.push({
+                    x: time
+                    , y: result
+                });
+            }else if(chart.data.datasets[0].data.length == 0){
+                chart.data.datasets[0].data.push({
+                    x: time
+                    , y: result
+                });
+            }else{
+                 chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].y = result;
+            }
+            addRequest(timeNotRounded);
+        }
+
+        //Requesting new fragment with last known quality change
+        if (txt.indexOf("Getting the request for video time") >= 0 && chart.data.datasets[0].data.length > 0) {
+            addRequest(timeNotRounded);
+        }
+        chart.update();
+        originallog.apply(console, arguments);
+    }
+        
+    function addRequest(time){
+        var lastQuality = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1].y;
+            if(chart.data.datasets[2].data.length > 0 && chart.data.datasets[2].data[chart.data.datasets[2].data.length - 1].x != time){
+                chart.data.datasets[2].data.push({
+                    x: time
+                    , y: lastQuality
+                });
+            }else if(chart.data.datasets[2].data.length == 0){
+                chart.data.datasets[2].data.push({
+                    x: time
+                    , y: lastQuality
+                });
+            }
+    }
+    function updateInfo() {
+        //Quality
+        var qualityData = chart.data.datasets[2].data[0];
+        document.getElementById("qualityBox").value = "Time\tQuality\n" + qualityData.x + "\t" + qualityData.y;
+        for (var i = 1; i < chart.data.datasets[2].data.length; i++) {
+            qualityData = chart.data.datasets[2].data[i];
+            document.getElementById("qualityBox").value += "\n" + qualityData.x + "\t" + qualityData.y;
+        }
+        //Buffer
+        var bufferData = chart.data.datasets[1].data[0];
+        document.getElementById("bufferBox").value = "Time\tBuffer\n" + bufferData.x + "\t" + bufferData.y;
+        for (var i = 1; i < chart.data.datasets[1].data.length; i++) {
+            bufferData = chart.data.datasets[1].data[i];
+            document.getElementById("bufferBox").value += "\n" + bufferData.x + "\t" + bufferData.y;
+        }
+        //Request
+        var requestData = chart.data.datasets[2].data[0];
+        document.getElementById("requestBox").value = "Time\tRequest\n" + requestData.x + "\t" + requestData.y;
+        for (var i = 1; i < chart.data.datasets[2].data.length; i++) {
+            requestData = chart.data.datasets[2].data[i];
+            document.getElementById("requestBox").value += "\n" + requestData.x + "\t" + requestData.y;
+        }
+    }
     </script>
 </body>
 </html>
