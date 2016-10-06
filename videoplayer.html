@@ -1,6 +1,5 @@
 <!doctype html>
 <html>
-
 <head>
     <title>Dash.js - Data collection</title>
     <style>
@@ -10,10 +9,25 @@
         }
     </style>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.3.0/Chart.min.js"></script>
+    <script type="text/javascript" src="https://rtek.cloud/jquery-2.2.2.min.js"></script>
+    <script src="http://cdn.dashjs.org/latest/dash.mediaplayer.min.js"></script>
 </head>
-
 <body>
-    <div>
+    Select videostream to use:
+    <select id="streams">
+        <option value="">Test is stopped</option>
+        <option value="http://www-itec.uni-klu.ac.at/ftp/datasets/DASHDataset2014/BigBuckBunny/15sec/BigBuckBunny_15s_simple_2014_05_09.mpd">
+        [Online] BigBuckBunny_15s_simple_2014_05_09.mpd
+        </option>
+        <option value="http://www-itec.uni-klu.ac.at/ftp/datasets/DASHDataset2014/BigBuckBunny/4sec/BigBuckBunny_4s_simple_2014_05_09.mpd">
+        [Online] BigBuckBunny_4s_simple_2014_05_09.mpd
+        </option>
+        <option value="http://www-itec.uni-klu.ac.at/ftp/datasets/DASHDataset2014/BigBuckBunny/1sec/BigBuckBunny_1s_simple_2014_05_09.mpd">
+        [Online] BigBuckBunny_1s_simple_2014_05_09.mpd
+        </option>
+    </select>
+    <br>
+    <div id="playerArea">
         <video id="videoPlayer" controls></video>
     </div>
     <canvas id="playerChart" width="640" height="400"></canvas>
@@ -21,12 +35,36 @@
     <br>
     <textarea id="qualityBox" rows="5"></textarea>
     <textarea id="bufferBox" rows="5"></textarea>
-    <textarea id="requestBox" rows="5"></textarea>
-
-    <script src="http://cdn.dashjs.org/latest/dash.mediaplayer.min.js"></script>
+    <textarea id="requestBox" rows="5"></textarea>    
     <script>
+        //Video player initializarion and video stream detection
+        var player = dashjs.MediaPlayer().create();
+        var startTime = Math.floor(Date.now() / 1000);
+        $.get("/streams", function(data){
+            var streamList = jQuery.parseJSON(data);
+            $.each(streamList, function(k, v) {
+                var fileNameIndex = v.lastIndexOf("/") + 1;
+                var filename = v.substr(fileNameIndex);
+                $('#streams') .append($("<option></option>").attr("value", v).text("[LOCAL] " + filename));
+            });
+        });
+        $('#streams').on('change', function() {
+            $("#videoPlayer").remove();
+            $("#playerArea").append('<video id="videoPlayer" controls></video>');
+            player = dashjs.MediaPlayer().create();
+            if(this.value != ""){
+                chart.data.datasets[0].data = [];
+                chart.data.datasets[1].data = [];
+                chart.data.datasets[2].data = [];
+                checkBuffer = false;
+                startTime = Math.floor(Date.now() / 1000);
+                player.initialize(document.querySelector("#videoPlayer"), this.value, true); 
+            }
+        });
+        
+        //Logging and plotting
+        
         //Remember start time and initiate a new chart
-        const startTime = Math.floor(Date.now() / 1000);
         var ctx = document.getElementById("playerChart");
         var chart = new Chart(ctx, {
             type: 'line'
@@ -61,11 +99,6 @@
                 }
             }
         });
-
-        //Initalize the player
-        var url = "http://www-itec.uni-klu.ac.at/ftp/datasets/DASHDataset2014/BigBuckBunny/2sec/BigBuckBunny_2s_simple_2014_05_09.mpd";
-        var player = dashjs.MediaPlayer().create();
-        player.initialize(document.querySelector("#videoPlayer"), url, true);
 
         var checkBuffer = false;
 
@@ -168,7 +201,5 @@
             }
         }
     </script>
-
 </body>
-
 </html>
