@@ -12,12 +12,12 @@ Used to collect data for a report we created this project to test how DASH.js ha
 
 **If you wish to test local streaming and have Go installed you can follow these steps:**
 
-1. Download the test files by running this in the repo directory (this will take a while)
+**[1]** Download the test files by running this in the repo directory (this will take a while)
 
 `wget -r ftp://ftp-itec.uni-klu.ac.at/pub/datasets/DASHDataset2014/BigBuckBunny/ -P video/`
 
-2. Start the webserver (make sure you have Go installed):
+**[2]** Start the webserver (make sure you have Go installed):
 
 `go run webserver.go`
 
-3. Navigate to http://localhost:8080/
+**[3]** Navigate to http://localhost:8080/
