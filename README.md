@@ -8,7 +8,7 @@ Used to collect data for a report we created this project to test how DASH.js ha
   
 # Usage
 
-*If you wish to test streaming from online sources you can simply open the file `videoplayer.html` in your browser.*
+*If you wish to test streaming from online sources you can simply open the hosted version of this test at https://rtek.cloud/videoplayer.html*
 
 **If you wish to test local streaming and have Go installed you can follow these steps:**
 
