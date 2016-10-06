@@ -1,34 +1,51 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
+var avaiableStreams []string
+
 func main() {
-	bufferSize := os.Args[1]
-	if bufferSize != "1" && bufferSize != "4" && bufferSize != "15" {
-		log.Fatalln("Buffersize needs to be ither 1, 4 or 15.")
+	log.Println("Scanning video/ directory for mpd files.")
+	if err := filepath.Walk("./video/", discover); err != nil {
+		log.Fatalln("Could not read video/ directory.")
 	}
-	http.Handle("/", request(bufferSize))
+	log.Println("Server is up and running at http://localhost:8080/")
+	http.Handle("/", request())
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 }
 
+func discover(path string, f os.FileInfo, err error) error {
+	filename := f.Name()
+	if strings.HasSuffix(filename, ".mpd") && err == nil {
+		avaiableStreams = append(avaiableStreams, "/"+path)
+	}
+	return nil
+}
+
 //Router and logger
-func request(bufferSize string) http.HandlerFunc {
+func request() http.HandlerFunc {
 	return (func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Request: " + r.URL.Path)
+		start := time.Now()
 		switch r.URL.Path {
 		case "/":
 			serveIndex(w, r)
-		case "/video.mpd":
-			serveMeta(w, r, bufferSize)
+		case "/streams":
+			listStreams(w, r)
 		default:
-			serveVideo(w, r, bufferSize)
+			serveVideo(w, r)
 		}
+		elapsed := time.Since(start) / 1000
+		log.Printf("HTTP Request: %s %s, Total time: %dms\n", r.Method, r.URL.Path, elapsed)
 	})
 }
 
@@ -37,12 +54,14 @@ func serveIndex(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./videoplayer.html")
 }
 
-//Serve meta file
-func serveMeta(w http.ResponseWriter, r *http.Request, bufferSize string) {
-	http.ServeFile(w, r, "./video/"+bufferSize+"sec/BigBuckBunny_"+bufferSize+"s_simple_2014_05_09.mpd")
+//List available streams
+func listStreams(w http.ResponseWriter, r *http.Request) {
+	encoder := json.NewEncoder(w)
+	encoder.Encode(avaiableStreams)
 }
 
 //Serve video files
-func serveVideo(w http.ResponseWriter, r *http.Request, bufferSize string) {
-	http.ServeFile(w, r, "./video/"+bufferSize+"sec/")
+func serveVideo(w http.ResponseWriter, r *http.Request) {
+	path := "." + r.URL.Path
+	http.ServeFile(w, r, path)
 }
